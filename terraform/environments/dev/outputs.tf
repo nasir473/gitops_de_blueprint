@@ -73,5 +73,47 @@ output "glue_job_role_arn" {
   value       = module.glue_bronze_to_silver.role_arn
 }
 
+output "glue_delta_job_name" {
+  description = "The name of the Bronze to Silver Delta Glue ETL job"
+  value       = module.glue_bronze_to_silver_delta.job_name
+}
+
+output "glue_delta_job_arn" {
+  description = "The ARN of the Bronze to Silver Delta Glue ETL job"
+  value       = module.glue_bronze_to_silver_delta.job_arn
+}
+
+output "glue_delta_job_role_arn" {
+  description = "The ARN of the IAM role used by the Delta Glue ETL job"
+  value       = module.glue_bronze_to_silver_delta.role_arn
+}
+
+output "athena_results_bucket_name" {
+  description = "The name of the S3 bucket used for Athena query results"
+  value       = module.s3_athena_results.bucket_name
+}
+
+output "athena_results_bucket_arn" {
+  description = "The ARN of the S3 bucket used for Athena query results"
+  value       = module.s3_athena_results.bucket_arn
+}
+
+output "athena_workgroup_name" {
+  description = "The name of the dedicated Athena workgroup"
+  value       = aws_athena_workgroup.dev.name
+}
+
+output "glue_database_name" {
+  description = "The name of the Glue Data Catalog database"
+  value       = aws_glue_catalog_database.this.name
+}
+
+output "glue_silver_parquet_crawler_name" {
+  description = "The name of the Glue crawler strictly for Silver Parquet data"
+  value       = aws_glue_crawler.silver_parquet_crawler.name
+}
+
+
+
 
 
