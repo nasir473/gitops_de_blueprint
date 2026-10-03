@@ -21,7 +21,7 @@ This roadmap outlines the phased, incremental implementation plan for building a
 | **3** | **S3 Storage Architecture** | **In Progress** | Reusable S3 module, Bronze, Silver, & Scripts buckets provisioned, SSE-S3 encryption, lifecycle tiering, TLS enforcement | `gitops-bronze-bkt`, `gitops-silver-bkt`, `gitops-scripts-bkt` live in dev |
 | **4** | **IAM Roles & GitHub Actions OIDC Trust** | **Pending User Trigger** | Terraform IAM module, least-privilege service roles (Glue, Lambda, Airflow), GitHub Actions OIDC federated trust | `"Proceed with Phase 4: Implement IAM Roles and GitHub Actions OIDC Trust"` |
 | **5** | **Event Ingestion (EventBridge / SQS / Lambda Trigger)** | **Pending User Trigger** | S3 event notifications, SQS dead-letter queue, validation Lambda handler, unit tests | `"Proceed with Phase 5: Implement Event Ingestion with SQS and Lambda"` |
-| **6** | **Glue Catalog & PySpark Bronze-to-Silver Job** | **Pending User Trigger** | Glue Data Catalog database/tables, PySpark job script with schema enforcement & deduplication, shared PySpark utils | `"Proceed with Phase 6: Implement Glue Catalog and PySpark Bronze-to-Silver Job"` |
+| **6** | **Glue Catalog & PySpark Bronze-to-Silver Job** | **In Progress** | Reusable Glue module, IAM role, PySpark ETL script uploaded to S3, Glue job provisioned | `gitops-bronze-to-silver-employees-dev` provisioned in dev |
 | **7** | **Airflow Orchestration & DAG Setup** | **Pending User Trigger** | Production Airflow DAGs, Glue job operators, dataset sensors, DAG integrity tests | `"Proceed with Phase 7: Implement Airflow Orchestration and DAG Setup"` |
 | **8** | **Athena Ad-Hoc Analytics & Data Quality Rules** | **Pending User Trigger** | Athena workgroup, result bucket settings, DDL partition scripts, SQL data quality assertion suite | `"Proceed with Phase 8: Configure Athena Ad-Hoc Analytics and Data Quality Rules"` |
 | **9** | **Future Snowflake Scaffolding** | **Pending User Trigger** | Snowflake external storage integration, stages pointing to S3 Silver, RBAC roles, target analytical tables | `"Proceed with Phase 9: Implement Snowflake Storage Integration and RBAC Scaffolding"` |
@@ -102,16 +102,21 @@ This roadmap outlines the phased, incremental implementation plan for building a
 
 ---
 
-### Phase 6: Glue Catalog & PySpark Bronze-to-Silver Job
-- **Status**: **Pending User Trigger**
-- **Objective**: Implement enterprise distributed ETL processing raw Bronze payloads into clean Silver Parquet.
+### Phase 6: Glue Catalog & PySpark Bronze-to-Silver Job (Parquet & Delta)
+- **Status**: **Complete (Dual Parquet & Delta Glue Jobs Provisioned & Verified)**
+- **Objective**: Implement enterprise distributed ETL processing raw Bronze payloads into clean Silver Parquet and Delta Lake formats.
 - **Key Deliverables**:
-  - Reusable `terraform/modules/glue` module for Data Catalog databases, tables, and Glue 4.0 Job.
-  - `src/glue/jobs/bronze_to_silver.py`: PySpark script implementing schema casting, null handling, deduplication, partition writes, and quarantine routing for bad rows.
-  - `src/glue/common/`: Shared transformation helpers, schema contracts, and logger.
-  - PySpark unit tests using local Spark session fixture.
+  - Reusable `terraform/modules/glue` module for AWS Glue 4.0 Jobs and IAM execution roles.
+  - `src/glue/jobs/bronze_to_silver.py`: PySpark script implementing schema casting, null handling, deduplication, and Snappy Parquet writes to `curated/employees/`.
+  - `src/glue/jobs/bronze_to_silver_delta.py`: PySpark script writing ACID Delta Lake table to `delta/employees/` with transaction logs.
+  - S3 Script Deployments in `s3://gitops-scripts-bkt-dev-790347819012/glue/jobs/`.
+  - Glue Job Resources:
+    - `gitops-bronze-to-silver-employees-dev` (**Active / Verified**)
+    - `gitops-bronze-to-silver-delta-employees-dev` (**Active / Provisioned**)
+  - Dual-branch Airflow orchestration in `airflow/dags/first_workflow.py`.
 - **Validation Gate**:
-  - PySpark transformation logic verified via unit tests; Silver output matches expected schema.
+  - `aws glue get-job` confirms both jobs active in `ap-south-1`.
+  - Silver S3 bucket stores Parquet and Delta tables in separate prefixes.
 
 ---
 
@@ -128,16 +133,18 @@ This roadmap outlines the phased, incremental implementation plan for building a
 
 ---
 
-### Phase 8: Athena Ad-Hoc Analytics & Data Quality Rules
-- **Status**: **Pending User Trigger**
+### Phase 8: Athena Ad-Hoc Analytics & Data Catalog (Silver Parquet)
+- **Status**: **Complete (Glue Catalog Database, Crawler, & Athena Workgroup Active)**
 - **Objective**: Enable interactive SQL exploration and automated data quality assertions.
 - **Key Deliverables**:
-  - Reusable `terraform/modules/athena` module configuring dedicated workgroup and query result encryption.
-  - `sql/athena/ddl/`: External table definitions pointing to Silver Parquet partitions.
-  - `sql/athena/quality_checks/`: Suite of assertion queries (null checks, range checks, foreign key checks, uniqueness).
-  - Automation script `scripts/run_quality_checks.py` executing Athena assertions and returning exit code.
+  - `aws_glue_catalog_database`: `gitops_dev_db` (**Active**).
+  - `aws_glue_crawler`: `gitops-silver-parquet-crawler-dev` (**Active / Crawl Succeeded**).
+    - Scope: Strictly limited to `s3://gitops-silver-bkt-dev-790347819012/curated/employees/`.
+    - Cataloged Table: `gitops_dev_db.employees` (46 rows, 4 department partitions).
+  - `aws_athena_workgroup`: `gitops-dev-workgroup` (**Active**).
+  - `module.s3_athena_results`: `gitops-athena-results-bkt-dev-790347819012` (**Active**).
 - **Validation Gate**:
-  - Query assertions execute and report pass/fail status with query execution IDs.
+  - Athena SQL queries execute successfully against `gitops_dev_db.employees` and return aggregated and granular records.
 
 ---
 
