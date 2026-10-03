@@ -1,0 +1,15 @@
+# ==============================================================================
+# Apache Airflow Dependencies & Provider Packages (Phase 7 Orchestration)
+# ==============================================================================
+# Base Airflow (Installed according to environment constraints)
+# apache-airflow==2.9.1
+
+# AWS Provider (S3, Glue, Athena, SQS, EventBridge operators)
+# apache-airflow-providers-amazon>=8.19.0
+
+# Snowflake Provider (Phase 9 Integration)
+# apache-airflow-providers-snowflake>=5.4.0
+
+# Common HTTP & Notification Providers
+# apache-airflow-providers-http>=4.10.0
+# apache-airflow-providers-slack>=8.6.0
