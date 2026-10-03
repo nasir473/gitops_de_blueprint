@@ -58,4 +58,20 @@ output "scripts_bucket_regional_domain_name" {
   value       = module.s3_scripts.bucket_regional_domain_name
 }
 
+output "glue_job_name" {
+  description = "The name of the Bronze to Silver Glue ETL job"
+  value       = module.glue_bronze_to_silver.job_name
+}
+
+output "glue_job_arn" {
+  description = "The ARN of the Bronze to Silver Glue ETL job"
+  value       = module.glue_bronze_to_silver.job_arn
+}
+
+output "glue_job_role_arn" {
+  description = "The ARN of the IAM role used by the Glue ETL job"
+  value       = module.glue_bronze_to_silver.role_arn
+}
+
+
 
