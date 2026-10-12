@@ -1,0 +1,26 @@
+emp_id,name,department,salary,city,date_of_joining
+106,Meera Nair,Finance,71500,Chennai,2023-02-18
+107,Siddharth Joshi,Sales,54500,Bangalore,2023-07-25
+108,Neha Kulkarni,HR,62500,Mumbai,2023-03-30
+109,Karan Malhotra,IT,95000,Delhi,2022-10-14
+110,Rhea Sen,Finance,78000,Pune,2023-05-22
+126,Amitabh Ghosh,IT,91500,Kolkata,2023-02-11
+127,Pallavi Sen,Finance,75500,Pune,2023-04-19
+128,Rajesh Iyer,Sales,57000,Chennai,2023-07-08
+129,Sunita Rao,HR,64500,Hyderabad,2023-09-15
+130,Vivek Saxena,IT,96000,Bangalore,2022-11-20
+131,Bhavna Mehra,Finance,78500,Delhi,2023-03-05
+132,Naveen Pillai,Sales,62000,Mumbai,2023-06-12
+133,Ritu Singhal,HR,68000,Pune,2023-08-28
+134,Tarun Varma,IT,88500,Hyderabad,2023-01-22
+135,Kavita Chawla,Finance,76000,Bangalore,2023-10-30
+156,Vikas Singhania,IT,94500,Delhi,2023-02-20
+157,Tanmay Bhat,Finance,77500,Mumbai,2023-04-26
+158,Ritika Jain,Sales,59000,Bangalore,2023-06-14
+159,Akash Malhotra,HR,64000,Pune,2023-08-08
+160,Sanya Kapoor,IT,97000,Hyderabad,2022-10-30
+161,Omkar Deshmukh,Finance,80500,Mumbai,2023-03-12
+162,Parul Saxena,Sales,63000,Delhi,2023-05-27
+163,Girish Nambiar,HR,68500,Chennai,2023-09-01
+164,Vidya Pillai,IT,89000,Bangalore,2023-01-25
+165,Chetan Sethi,Finance,75000,Pune,2023-11-18

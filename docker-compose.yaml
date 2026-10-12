@@ -79,6 +79,12 @@ x-airflow-common:
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
     AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-south-1}
     AWS_REGION: ${AWS_REGION:-ap-south-1}
+    DATABRICKS_HOST: ${DATABRICKS_HOST:-https://dbc-6396e0b0-9912.cloud.databricks.com}
+    DATABRICKS_TOKEN: ${DATABRICKS_TOKEN:-}
+    DATABRICKS_WAREHOUSE_ID: ${DATABRICKS_WAREHOUSE_ID:-d6845e35de9cbeee}
+    DATABRICKS_CATALOG: ${DATABRICKS_CATALOG:-gitops_dev_catalog}
+    SQS_BATCH_READY_QUEUE_URL: ${SQS_BATCH_READY_QUEUE_URL:-https://sqs.ap-south-1.amazonaws.com/790347819012/gitops-batch-ready-queue-dev}
+    DYNAMODB_BATCH_TABLE: ${DYNAMODB_BATCH_TABLE:-gitops-batch-coordination-dev}
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
@@ -86,6 +92,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
     - ./src:/opt/airflow/src
     - ./Data:/opt/airflow/Data
+    - ./.env:/opt/airflow/.env:ro
     - ~/.aws:/home/airflow/.aws:ro
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:

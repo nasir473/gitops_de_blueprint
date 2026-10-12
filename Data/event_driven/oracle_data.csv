@@ -1,0 +1,26 @@
+emp_id,name,department,salary,city,date_of_joining
+111,Aditya Rao,Sales,56000,Hyderabad,2023-09-08
+112,Ananya Iyer,HR,63500,Chennai,2023-01-28
+113,Manish Desai,IT,91000,Bangalore,2022-12-04
+114,Kavita Menon,Finance,73500,Mumbai,2023-08-19
+115,Arjun Reddy,Sales,55000,Hyderabad,2023-03-14
+136,Sanjay Hegde,IT,94000,Bangalore,2023-03-10
+137,Priyanka Mishra,Finance,77000,Delhi,2023-05-14
+138,Harish Chauhan,Sales,58500,Mumbai,2023-07-16
+139,Swati Kulkarni,HR,65000,Pune,2023-09-02
+140,Alok Pandey,IT,92500,Hyderabad,2022-12-15
+141,Madhav Menon,Finance,80000,Chennai,2023-02-25
+142,Nandini Bose,Sales,60500,Kolkata,2023-06-01
+143,Rakesh Bhatia,HR,67000,Delhi,2023-08-18
+144,Varun Nair,IT,90500,Bangalore,2023-01-10
+145,Preeti Tiwari,Finance,75000,Mumbai,2023-11-04
+166,Devendra Prasad,IT,95500,Bangalore,2023-03-15
+167,Shruti Vaidya,Finance,79500,Pune,2023-05-20
+168,Manoj Tiwari,Sales,58000,Delhi,2023-07-11
+169,Geeta Ranganathan,HR,66000,Chennai,2023-09-09
+170,Ashish Goel,IT,93000,Hyderabad,2022-12-22
+171,Leela Murthy,Finance,81500,Bangalore,2023-02-16
+172,Dharmesh Mehta,Sales,62500,Ahmedabad,2023-06-08
+173,Komal Agarwal,HR,67500,Kolkata,2023-08-25
+174,Raghavendra Rao,IT,92000,Hyderabad,2023-01-05
+175,Shweta Pandey,Finance,76000,Mumbai,2023-11-29

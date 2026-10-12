@@ -88,6 +88,21 @@ output "glue_delta_job_role_arn" {
   value       = module.glue_bronze_to_silver_delta.role_arn
 }
 
+output "glue_iceberg_job_name" {
+  description = "The name of the Bronze to Silver Iceberg Glue ETL job"
+  value       = module.glue_bronze_to_silver_iceberg.job_name
+}
+
+output "glue_iceberg_job_arn" {
+  description = "The ARN of the Bronze to Silver Iceberg Glue ETL job"
+  value       = module.glue_bronze_to_silver_iceberg.job_arn
+}
+
+output "glue_iceberg_job_role_arn" {
+  description = "The ARN of the IAM role used by the Iceberg Glue ETL job"
+  value       = module.glue_bronze_to_silver_iceberg.role_arn
+}
+
 output "athena_results_bucket_name" {
   description = "The name of the S3 bucket used for Athena query results"
   value       = module.s3_athena_results.bucket_name
@@ -113,7 +128,103 @@ output "glue_silver_parquet_crawler_name" {
   value       = aws_glue_crawler.silver_parquet_crawler.name
 }
 
+# ==============================================================================
+# Databricks Resource Outputs
+# ==============================================================================
+output "databricks_catalog_name" {
+  description = "The Databricks Unity Catalog name"
+  value       = var.enable_databricks ? module.databricks[0].catalog_name : null
+}
 
+output "databricks_external_location_name" {
+  description = "The Databricks External Location name"
+  value       = var.enable_databricks ? module.databricks[0].external_location_name : null
+}
+
+output "databricks_external_location_url" {
+  description = "The Databricks External Location S3 URL"
+  value       = var.enable_databricks ? module.databricks[0].external_location_url : null
+}
+
+output "databricks_schema_name" {
+  description = "The Databricks Unity Catalog schema name"
+  value       = var.enable_databricks ? module.databricks[0].schema_name : null
+}
+
+output "databricks_gold_schema_name" {
+  description = "The Databricks Unity Catalog gold schema name"
+  value       = var.enable_databricks ? module.databricks[0].gold_schema_name : null
+}
+
+output "sqs_batch_ready_queue_url" {
+  description = "The URL of the SQS Batch Ready Queue"
+  value       = module.sqs_batch_ready.queue_url
+}
+
+output "sqs_batch_ready_queue_arn" {
+  description = "The ARN of the SQS Batch Ready Queue"
+  value       = module.sqs_batch_ready.queue_arn
+}
+
+output "sqs_batch_ready_dlq_url" {
+  description = "The URL of the SQS Batch Ready Dead Letter Queue"
+  value       = module.sqs_batch_ready.dlq_url
+}
+
+output "dynamodb_batch_coordination_table_name" {
+  description = "The name of the DynamoDB batch coordination table"
+  value       = module.dynamodb_batch_coordination.table_name
+}
+
+output "dynamodb_batch_coordination_table_arn" {
+  description = "The ARN of the DynamoDB batch coordination table"
+  value       = module.dynamodb_batch_coordination.table_arn
+}
+
+output "lambda_manifest_validator_function_name" {
+  description = "The name of the Manifest Validator Lambda function"
+  value       = module.lambda_manifest_validator.function_name
+}
+
+output "lambda_manifest_validator_function_arn" {
+  description = "The ARN of the Manifest Validator Lambda function"
+  value       = module.lambda_manifest_validator.function_arn
+}
+
+output "sns_batch_events_topic_arn" {
+  description = "The ARN of the SNS Batch Events Fan-Out topic"
+  value       = module.sns_batch_events.topic_arn
+}
+
+output "sns_batch_events_topic_name" {
+  description = "The name of the SNS Batch Events Fan-Out topic"
+  value       = module.sns_batch_events.topic_name
+}
+
+output "sns_pipeline_alerts_topic_arn" {
+  description = "The ARN of the SNS Pipeline Alerts topic"
+  value       = module.sns_pipeline_alerts.topic_arn
+}
+
+output "sns_pipeline_alerts_topic_name" {
+  description = "The name of the SNS Pipeline Alerts topic"
+  value       = module.sns_pipeline_alerts.topic_name
+}
+
+output "cloudwatch_dashboard_name" {
+  description = "Name of the Unified Platform CloudWatch Dashboard"
+  value       = module.monitoring.dashboard_name
+}
+
+output "cloudwatch_dashboard_arn" {
+  description = "ARN of the Unified Platform CloudWatch Dashboard"
+  value       = module.monitoring.dashboard_arn
+}
+
+output "cloudwatch_lambda_errors_alarm_arn" {
+  description = "ARN of the Lambda execution errors CloudWatch alarm"
+  value       = module.monitoring.lambda_errors_alarm_arn
+}
 
 
 

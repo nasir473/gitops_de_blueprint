@@ -61,6 +61,16 @@ GLUE_DATABASE = os.getenv("GLUE_DATABASE", "gitops_dev_db")
 ATHENA_WORKGROUP = os.getenv("ATHENA_WORKGROUP", "gitops-dev-workgroup")
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "ap-south-1")
 
+# Databricks Configuration
+DATABRICKS_HOST = os.getenv(
+    "DATABRICKS_HOST", "https://dbc-6396e0b0-9912.cloud.databricks.com"
+).strip('"')
+DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN", "").strip('"')
+DATABRICKS_WAREHOUSE_ID = os.getenv(
+    "DATABRICKS_WAREHOUSE_ID", "d6845e35de9cbeee"
+).strip('"')
+DATABRICKS_CATALOG = os.getenv("DATABRICKS_CATALOG", "gitops_dev_catalog").strip('"')
+
 # Resolve local CSV path within container or host
 POTENTIAL_PATHS = [
     Path("/opt/airflow/Data/csv/sample_data.csv"),
@@ -98,17 +108,23 @@ def validate_local_csv(**context) -> str:
 
 
 def upload_to_bronze_s3(**context) -> dict:
-    """Upload local CSV to Bronze S3 bucket."""
+    """Upload local CSV to Bronze S3 bucket with a unique timestamped file name."""
     ti = context["ti"]
     source_path = ti.xcom_pull(task_ids="validate_local_csv") or str(resolve_source_file())
 
     bucket_name = BRONZE_BUCKET
-    # Format partitioned key: raw/employees/year=YYYY/month=MM/day=DD/sample_data.csv
+    file_path = Path(source_path)
+
+    # Format partitioned key with UTC timestamp for a unique file name:
+    # Example: raw/employees/year=YYYY/month=MM/day=DD/sample_data_20261010_175500.csv
     now = datetime.utcnow()
+    timestamp_str = now.strftime("%Y%m%d_%H%M%S")
+    unique_filename = f"{file_path.stem}_{timestamp_str}{file_path.suffix}"
+
     s3_key = (
         f"raw/employees/year={now.strftime('%Y')}/"
         f"month={now.strftime('%m')}/"
-        f"day={now.strftime('%d')}/sample_data.csv"
+        f"day={now.strftime('%d')}/{unique_filename}"
     )
 
     print(f"Connecting to AWS S3 in region {AWS_REGION}...")
@@ -287,6 +303,115 @@ def query_athena_curated_data(**context) -> None:
         raise ValueError("Athena query returned zero records from cataloged table!")
 
 
+def refresh_databricks_gold_department_summary(**context) -> dict:
+    """Execute SQL aggregation on Databricks Serverless SQL Warehouse to refresh Gold table."""
+    token = DATABRICKS_TOKEN
+    if not token:
+        # Fallback to local .env if available
+        for env_path in [Path("/opt/airflow/.env"), Path("./.env")]:
+            if env_path.exists():
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("DATABRICKS_TOKEN="):
+                            token = line.split("=", 1)[1].strip().strip('"').strip("'")
+                            break
+            if token:
+                break
+
+    if not token:
+        raise ValueError(
+            "DATABRICKS_TOKEN is not configured in the environment or .env! "
+            "Please configure DATABRICKS_TOKEN to refresh the Gold layer."
+        )
+
+    host = (DATABRICKS_HOST or os.getenv("DATABRICKS_HOST", "")).strip('"')
+    warehouse_id = (DATABRICKS_WAREHOUSE_ID or os.getenv("DATABRICKS_WAREHOUSE_ID", "d6845e35de9cbeee")).strip('"')
+    catalog = (DATABRICKS_CATALOG or os.getenv("DATABRICKS_CATALOG", "gitops_dev_catalog")).strip('"')
+
+    import json
+    import ssl
+    import time
+    import urllib.request
+
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    refresh_sql = f"""
+    CREATE OR REPLACE TABLE {DATABRICKS_CATALOG}.gold.department_summary
+    COMMENT "Aggregated department-level metrics from Silver employee data"
+    AS
+    SELECT 
+        department,
+        COUNT(emp_id) AS total_employees,
+        ROUND(AVG(salary), 2) AS avg_salary,
+        ROUND(SUM(salary), 2) AS total_payroll,
+        MIN(date_of_joining) AS earliest_joining_date,
+        MAX(date_of_joining) AS latest_joining_date,
+        current_timestamp() AS aggregated_at
+    FROM 
+        {DATABRICKS_CATALOG}.silver.employees
+    GROUP BY 
+        department;
+    """
+
+    print("=" * 60)
+    print("SUBMITTING DATABRICKS GOLD AGGREGATION SQL STATEMENT")
+    print("=" * 60)
+    print(f"Target Catalog: {DATABRICKS_CATALOG}")
+    print(f"Target Table: {DATABRICKS_CATALOG}.gold.department_summary")
+    print(f"Warehouse ID: {DATABRICKS_WAREHOUSE_ID}")
+
+    payload = json.dumps({
+        "warehouse_id": DATABRICKS_WAREHOUSE_ID,
+        "statement": refresh_sql,
+        "wait_timeout": "30s",
+    }).encode("utf-8")
+
+    submit_req = urllib.request.Request(
+        f"{DATABRICKS_HOST}/api/2.0/sql/statements",
+        data=payload,
+        headers=headers,
+    )
+
+    with urllib.request.urlopen(submit_req, context=ctx) as resp:
+        submit_data = json.loads(resp.read().decode())
+
+    statement_id = submit_data.get("statement_id")
+    state = submit_data.get("status", {}).get("state")
+    print(f"Statement ID: {statement_id} (Initial state: {state})")
+
+    # Poll until statement completes
+    max_poll_seconds = 180
+    start_time = time.time()
+    while state in ["PENDING", "RUNNING"]:
+        if time.time() - start_time > max_poll_seconds:
+            raise TimeoutError(f"Databricks SQL statement timed out after {max_poll_seconds}s")
+        time.sleep(5)
+        check_req = urllib.request.Request(
+            f"{DATABRICKS_HOST}/api/2.0/sql/statements/{statement_id}",
+            headers=headers,
+        )
+        with urllib.request.urlopen(check_req, context=ctx) as check_resp:
+            check_data = json.loads(check_resp.read().decode())
+        state = check_data.get("status", {}).get("state")
+        print(f"Polling SQL statement status: {state}...")
+
+    if state != "SUCCEEDED":
+        error_msg = check_data.get("status", {}).get("error", {}).get("message", "Unknown error")
+        raise RuntimeError(f"Databricks Gold refresh failed with state {state}: {error_msg}")
+
+    print("=" * 60)
+    print("DATABRICKS GOLD REFRESH SUCCEEDED")
+    print("=" * 60)
+    return {"status": "succeeded", "statement_id": statement_id}
+
+
 default_args = {
     "owner": "data-platform",
     "depends_on_past": False,
@@ -384,9 +509,15 @@ with DAG(
         python_callable=query_athena_curated_data,
     )
 
+    # Gold Layer: Refresh Databricks Unity Catalog Gold Department Summary
+    refresh_gold_task = PythonOperator(
+        task_id="refresh_databricks_gold_department_summary",
+        python_callable=refresh_databricks_gold_department_summary,
+    )
+
     end_task = BashOperator(
         task_id="end_pipeline",
-        bash_command='echo "Medallion Pipeline (Bronze Ingestion -> Silver Parquet & Delta -> Glue Crawler -> Athena) completed successfully at $(date)"',
+        bash_command='echo "Medallion Pipeline (Bronze Ingestion -> Silver Parquet & Delta -> Glue Crawler -> Athena & Databricks Gold) completed successfully at $(date)"',
     )
 
     # Define DAG task dependencies:
@@ -403,10 +534,11 @@ with DAG(
         >> end_task
     )
 
-    # 3. Branch B: Delta Lake Ingestion -> S3 Verify -> End
+    # 3. Branch B: Delta Lake Ingestion -> S3 Verify -> Databricks Gold Aggregation -> End
     (
         verify_bronze_task
         >> glue_delta_task
         >> verify_delta_task
+        >> refresh_gold_task
         >> end_task
     )

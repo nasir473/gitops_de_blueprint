@@ -164,7 +164,10 @@ def transform_bronze_to_silver(df):
     )
 
     # 2. Business key deduplication (emp_id)
-    window_spec = Window.partitionBy("emp_id").orderBy(col("_ingested_at").desc())
+    # In case of duplicate entries across landing files, retain the latest file batch
+    window_spec = Window.partitionBy("emp_id").orderBy(
+        col("_source_file").desc(), col("_ingested_at").desc()
+    )
     deduped_df = (
         curated_df.withColumn("_row_num", row_number().over(window_spec))
         .filter(col("_row_num") == 1)

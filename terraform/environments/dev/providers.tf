@@ -6,10 +6,19 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    databricks = {
+      source  = "databricks/databricks"
+      version = ">= 1.40.0"
+    }
   }
 
   # Backend configuration will be added in Phase 2
   # backend "s3" {}
+}
+
+provider "databricks" {
+  host  = var.databricks_host
+  token = var.databricks_token
 }
 
 provider "aws" {

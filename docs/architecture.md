@@ -16,39 +16,84 @@ This blueprint defines an enterprise-grade, GitOps-driven modern data platform b
 
 ```mermaid
 flowchart TD
-    subgraph Ingestion ["1. Data Ingestion & Event Capture"]
-        SRC["External Data Providers / APIs"] -->|"Raw Ingest (JSON/CSV)"| S3_BRONZE["S3 Bronze Bucket (Raw / Immutable)"]
-        S3_BRONZE -->|"ObjectCreated Event"| SQS["Amazon SQS Queue (Buffering & DLQ)"]
-        SQS -->|"Batch Trigger"| LAMBDA["AWS Lambda Ingestion Trigger"]
+    subgraph Ingestion ["1. Multi-Source Ingestion & Manifests"]
+        SRC_FS["File Share Transfer<br/>(file_share_data.csv)"]
+        SRC_API["REST API Ingestion<br/>(api_data.csv)"]
+        SRC_ORA["Oracle DB Extraction<br/>(oracle_data.csv)"]
+        S3_BRONZE[("S3 Bronze Bucket<br/>(Raw CSV + .manifest)")]
+        SRC_FS & SRC_API & SRC_ORA -->|"Raw CSV + Manifest"| S3_BRONZE
     end
 
-    subgraph Orchestration ["2. Orchestration & Coordination"]
-        AIRFLOW["Apache Airflow (DAGs)"]
-        LAMBDA -->|"Trigger / Signal"| AIRFLOW
+    subgraph Barrier ["2. Serverless Barrier & Synchronization"]
+        LAMBDA["AWS Lambda Ingestion Trigger<br/>(Manifest Validator)"]
+        DDB[("Amazon DynamoDB<br/>(Atomic Barrier State)")]
+        SQS["Amazon SQS Queue<br/>(gitops-batch-ready-queue-dev)"]
+        SNS["Amazon SNS Topic<br/>(Batch Ready Broadcast)"]
+        SQS_DLQ["Dead-Letter Queue (DLQ)"]
+
+        S3_BRONZE -->|"ObjectCreated (*.manifest)"| LAMBDA
+        LAMBDA <-->|"Conditional Check Expression"| DDB
+        LAMBDA -->|"All Sources Complete"| SQS
+        LAMBDA -->|"Broadcast Alert"| SNS
+        SQS -.->|"Failure"| SQS_DLQ
     end
 
-    subgraph Processing ["3. ETL & Data Processing"]
-        AIRFLOW -->|"Execute Job"| GLUE["AWS Glue PySpark Job"]
-        GLUE -->|"Read Raw"| S3_BRONZE
-        GLUE -->|"Transform & Deduplicate"| S3_SILVER["S3 Silver Bucket (Cleaned Parquet)"]
-        GLUE -->|"Route Corrupt Records"| S3_QUARANTINE["S3 Quarantine Bucket"]
-        GLUE -->|"Register Schema & Partitions"| GLUE_CATALOG["AWS Glue Data Catalog"]
+    subgraph Orchestration ["3. Airflow Orchestration & Sensors"]
+        AIRFLOW_SENSOR["Airflow SqsSensor<br/>(wait_for_sqs_batch_ready)"]
+        AIRFLOW_PARSE["Parse Batch Metadata"]
+        SQS -->|"Dequeue"| AIRFLOW_SENSOR
+        AIRFLOW_SENSOR --> AIRFLOW_PARSE
     end
 
-    subgraph Analytics ["4. Query & Analytics Layer"]
-        GLUE_CATALOG --- ATHENA["Amazon Athena (Ad-hoc SQL)"]
-        S3_SILVER --- ATHENA
-        ATHENA -->|"Query Spooling"| S3_ATHENA["S3 Athena Results Bucket"]
+    subgraph Processing ["4. Parallel PySpark Processing (AWS Glue 4.0)"]
+        GLUE_PQ["AWS Glue Job: Parquet<br/>(bronze_to_silver)"]
+        GLUE_DELTA["AWS Glue Job: Delta Lake<br/>(bronze_to_silver_delta)"]
+        GLUE_ICE["AWS Glue Job: Iceberg<br/>(bronze_to_silver_iceberg)"]
+
+        AIRFLOW_PARSE --> GLUE_PQ
+        AIRFLOW_PARSE --> GLUE_DELTA
+        AIRFLOW_PARSE --> GLUE_ICE
+
+        S3_BRONZE -.-> GLUE_PQ & GLUE_DELTA & GLUE_ICE
+
+        S3_SILVER_PQ[("S3 Silver Parquet")]
+        S3_QUARANTINE[("S3 Quarantine Bucket")]
+        S3_SILVER_DELTA[("S3 Silver Delta Lake")]
+        S3_SILVER_ICE[("S3 Silver Apache Iceberg")]
+
+        GLUE_PQ -->|"Valid Snappy Parquet"| S3_SILVER_PQ
+        GLUE_PQ -->|"Corrupt / Invalid Schema"| S3_QUARANTINE
+        GLUE_DELTA -->|"ACID Delta Log & Data"| S3_SILVER_DELTA
+        GLUE_ICE -->|"Table Format v2"| S3_SILVER_ICE
     end
 
-    subgraph Downstream ["5. Enterprise Warehouse (Phase 9)"]
-        S3_SILVER -->|"External Stage / Snowpipe"| SNOWFLAKE["Snowflake Data Cloud"]
+    subgraph Discovery ["5. Verification & Metadata Discovery"]
+        CRAWLER["AWS Glue Crawler<br/>(silver-parquet-crawler)"]
+        GLUE_CATALOG[("AWS Glue Data Catalog<br/>(gitops_dev_db)")]
+        S3_SILVER_PQ --> CRAWLER
+        CRAWLER -->|"Discover Partitions & Schema"| GLUE_CATALOG
+        GLUE_ICE -->|"Native Catalog Sync"| GLUE_CATALOG
     end
 
-    subgraph Security_CI ["6. Governance & Automation"]
-        IAM["AWS IAM (Least Privilege & OIDC)"]
-        GHA["GitHub Actions CI/CD"]
-        GHA -->|"Terraform & Job Deploy"| IAM
+    subgraph Analytics ["6. Analytics, Governance & Gold Aggregations"]
+        ATHENA["Amazon Athena (Engine v3)<br/>Ad-hoc SQL Analytics"]
+        GLUE_CATALOG --- ATHENA
+        S3_SILVER_PQ --- ATHENA
+        S3_ATHENA[("S3 Athena Results Bucket")]
+        ATHENA -->|"Query Spooling"| S3_ATHENA
+
+        DBX_SQL["Databricks SQL Warehouse<br/>(Serverless API 2.0)"]
+        DBX_UC[("Databricks Unity Catalog<br/>(External Storage Location)")]
+        DBX_GOLD[("Databricks Gold Layer<br/>gold_department_summary")]
+        S3_SILVER_DELTA <--> DBX_UC
+        DBX_UC <--> DBX_SQL
+        DBX_SQL -->|"Refresh Gold Aggregations"| DBX_GOLD
+    end
+
+    subgraph Governance ["7. CI/CD & Security"]
+        IAM["AWS IAM Least Privilege Roles & OIDC"]
+        GHA["GitHub Actions CI/CD Pipeline"]
+        GHA -->|"Automated Lint, Test & Terraform"| IAM
     end
 ```
 

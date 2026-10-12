@@ -1,0 +1,26 @@
+emp_id,name,department,salary,city,date_of_joining
+101,Aarav Sharma,IT,88000,Bangalore,2023-01-15
+102,Isha Patel,Finance,76000,Mumbai,2023-04-10
+103,Rohan Gupta,Sales,58000,Delhi,2023-06-20
+104,Pooja Verma,HR,64000,Pune,2023-08-12
+105,Vikram Singh,IT,92000,Hyderabad,2022-11-05
+116,Rahul Bhatt,IT,87000,Bangalore,2023-02-14
+117,Simran Kaur,Finance,79000,Delhi,2023-05-18
+118,Tanvi Joshi,HR,66000,Mumbai,2023-07-22
+119,Gaurav Kapoor,Sales,59500,Pune,2023-09-10
+120,Deepak Choudhary,IT,93000,Hyderabad,2022-12-01
+121,Sneha Nambiar,Finance,81000,Chennai,2023-03-17
+122,Kunal Bansal,Sales,61000,Kolkata,2023-06-25
+123,Divya Aggarwal,HR,67500,Delhi,2023-08-05
+124,Pranav Nair,IT,89500,Bangalore,2023-01-30
+125,Ankita Roy,Finance,74000,Mumbai,2023-11-12
+146,Nikhil Joshi,IT,89000,Bangalore,2023-04-11
+147,Meghna Sen,Finance,76500,Kolkata,2023-06-19
+148,Suresh Nair,Sales,57500,Chennai,2023-08-23
+149,Aastha Sharma,HR,65500,Delhi,2023-10-05
+150,Karthik Raman,IT,93500,Hyderabad,2022-11-28
+151,Brijesh Patel,Finance,82000,Ahmedabad,2023-01-17
+152,Shalini Verma,Sales,61500,Pune,2023-05-09
+153,Rohit Kulkarni,HR,66500,Mumbai,2023-07-31
+154,Aniruddh Roy,IT,91000,Bangalore,2023-09-14
+155,Monika Das,Finance,78000,Kolkata,2023-12-03

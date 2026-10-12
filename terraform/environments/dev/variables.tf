@@ -37,3 +37,26 @@ variable "tags" {
     Repository = "gitops_de_blueprint"
   }
 }
+
+# ==============================================================================
+# Databricks Workspace Configuration
+# ==============================================================================
+variable "enable_databricks" {
+  description = "Toggle provisioning of Databricks resources"
+  type        = bool
+  default     = false
+}
+
+variable "databricks_host" {
+  description = "Databricks Workspace URL (e.g., https://dbc-xxxx.cloud.databricks.com)"
+  type        = string
+  default     = ""
+}
+
+variable "databricks_token" {
+  description = "Databricks Personal Access Token (PAT) or OAuth token"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

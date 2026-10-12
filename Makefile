@@ -52,6 +52,19 @@ tf-apply: ## Run terraform apply for target environment (default: dev, usage: ma
 	echo "==> Running Terraform apply for terraform/environments/$$ENV..."; \
 	terraform -chdir=terraform/environments/$$ENV apply
 
+.PHONY: databricks-plan
+databricks-plan: ## Run terraform plan for Databricks resources (usage: make databricks-plan ENV=dev)
+	@ENV=$${ENV:-dev}; \
+	echo "==> Running Terraform plan with Databricks enabled for terraform/environments/$$ENV..."; \
+	terraform -chdir=terraform/environments/$$ENV plan -var="enable_databricks=true"
+
+.PHONY: databricks-apply
+databricks-apply: ## Run terraform apply for Databricks resources (usage: make databricks-apply ENV=dev)
+	@ENV=$${ENV:-dev}; \
+	echo "==> Running Terraform apply with Databricks enabled for terraform/environments/$$ENV..."; \
+	terraform -chdir=terraform/environments/$$ENV apply -var="enable_databricks=true"
+
+
 .PHONY: airflow-init
 airflow-init: ## Initialize Airflow metadata database and admin user
 	@echo "==> Initializing Airflow database..."
@@ -83,4 +96,19 @@ clean: ## Clean up temporary files, caches, and build artifacts
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name ".terraform" -exec rm -rf {} +
 	find . -type f -name "*.tfstate*" -delete
+
+.PHONY: stream-to-bronze
+stream-to-bronze: ## Run Kafka to S3 Bronze streaming consumer (usage: make stream-to-bronze [BATCH_SIZE=50] [FLUSH_INTERVAL=15])
+	@PYTHON_BIN=$$(test -f "/Users/mohammednasirudeen/Downloads/Kafka-check/venv/bin/python" && echo "/Users/mohammednasirudeen/Downloads/Kafka-check/venv/bin/python" || echo "python3"); \
+	BATCH_SIZE=$${BATCH_SIZE:-50}; \
+	FLUSH_INTERVAL=$${FLUSH_INTERVAL:-15}; \
+	$$PYTHON_BIN src/streaming/kafka_to_bronze_consumer.py --batch-size $$BATCH_SIZE --flush-interval $$FLUSH_INTERVAL
+
+.PHONY: simulate-sources
+simulate-sources: ## Simulate multi-source ingestion (API, File Share, Oracle) uploading data + manifests (usage: make simulate-sources [SOURCE=all|api|file_share|oracle])
+	@PYTHON_BIN=$$(test -f "/Users/mohammednasirudeen/Downloads/Kafka-check/venv/bin/python" && echo "/Users/mohammednasirudeen/Downloads/Kafka-check/venv/bin/python" || echo "python3"); \
+	SOURCE=$${SOURCE:-all}; \
+	$$PYTHON_BIN src/ingestion/mock_multi_source_ingestion.py --source $$SOURCE
+
+
 
