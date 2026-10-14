@@ -502,6 +502,31 @@ module "databricks" {
 }
 
 # ==============================================================================
+# Snowflake Iceberg & Glue Integration IAM Resources
+# ==============================================================================
+module "snowflake_iam" {
+  count  = var.enable_snowflake ? 1 : 0
+  source = "../../modules/snowflake_iam"
+
+  project_name                       = var.project_name
+  environment                        = var.environment
+  aws_account_id                     = local.account_id
+  aws_region                         = var.aws_region
+  silver_bucket_arn                  = module.s3_silver.bucket_arn
+  silver_bucket_name                 = module.s3_silver.bucket_name
+  glue_database_name                 = aws_glue_catalog_database.this.name
+  snowflake_storage_aws_iam_user_arn = var.snowflake_storage_aws_iam_user_arn
+  snowflake_storage_aws_external_id  = var.snowflake_storage_aws_external_id
+  snowflake_catalog_aws_external_id  = var.snowflake_catalog_aws_external_id
+  tags                               = var.tags
+
+  depends_on = [
+    module.s3_silver,
+    aws_glue_catalog_database.this
+  ]
+}
+
+# ==============================================================================
 # SQS Queue: Batch Ready Queue & DLQ
 # ==============================================================================
 module "sqs_batch_ready" {

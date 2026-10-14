@@ -24,7 +24,7 @@ This roadmap outlines the phased, incremental implementation plan for building a
 | **6** | **Glue Catalog & PySpark Bronze-to-Silver Job** | **In Progress** | Reusable Glue module, IAM role, PySpark ETL script uploaded to S3, Glue job provisioned | `gitops-bronze-to-silver-employees-dev` provisioned in dev |
 | **7** | **Airflow Orchestration & DAG Setup** | **Pending User Trigger** | Production Airflow DAGs, Glue job operators, dataset sensors, DAG integrity tests | `"Proceed with Phase 7: Implement Airflow Orchestration and DAG Setup"` |
 | **8** | **Athena Ad-Hoc Analytics & Data Quality Rules** | **Pending User Trigger** | Athena workgroup, result bucket settings, DDL partition scripts, SQL data quality assertion suite | `"Proceed with Phase 8: Configure Athena Ad-Hoc Analytics and Data Quality Rules"` |
-| **9** | **Future Snowflake Scaffolding** | **Pending User Trigger** | Snowflake external storage integration, stages pointing to S3 Silver, RBAC roles, target analytical tables | `"Proceed with Phase 9: Implement Snowflake Storage Integration and RBAC Scaffolding"` |
+| **9** | **Snowflake Apache Iceberg Integration** | **In Progress (Scaffolded)** | Snowflake external volume, Glue catalog integration, Iceberg tables, RBAC roles, Terraform IAM module | Handshake & Validation Ready |
 | **10** | **CI/CD Pipelines & Automation** | **Pending User Trigger** | GitHub Actions workflows for PR linting, pytest matrix, Terraform plan on PR, automated apply on merge | `"Proceed with Phase 10: Implement CI/CD Pipelines and GitHub Actions Automation"` |
 
 ---
@@ -148,15 +148,17 @@ This roadmap outlines the phased, incremental implementation plan for building a
 
 ---
 
-### Phase 9: Future Snowflake Scaffolding
-- **Status**: **Pending User Trigger**
-- **Objective**: Establish Snowflake cloud data warehouse integration ready for analytical serving.
+### Phase 9: Snowflake Apache Iceberg Integration
+- **Status**: **In Progress (Scaffolded)**
+- **Objective**: Establish production-grade Snowflake integration with AWS Glue Data Catalog and Apache Iceberg on Amazon S3.
 - **Key Deliverables**:
-  - `snowflake/rbac/`: Role-based access control scripts (`SYSADMIN`, `DATA_ENGINEER`, `ANALYST`).
-  - `snowflake/stages/`: External stage definitions referencing AWS S3 Silver bucket via AWS Storage Integration.
-  - `snowflake/tables/`: DDL scripts for dimensional tables, staging tables, and views.
+  - `terraform/modules/snowflake_iam/`: Terraform IAM module with S3 and Glue Catalog read policies for Snowflake cross-account assume-role.
+  - `snowflake/stages/01_external_volume.sql`: External Volume connecting Snowflake to the Silver S3 Iceberg warehouse (`iceberg/`).
+  - `snowflake/stages/02_catalog_integration.sql`: Catalog Integration synchronizing with AWS Glue Catalog (`gitops_dev_db`).
+  - `snowflake/tables/01_iceberg_tables.sql`: Snowflake Iceberg Table definition with automated and manual metadata refresh capabilities.
+  - `snowflake/rbac/01_roles_and_grants.sql`: Enterprise RBAC granting access to `DATA_ENGINEER_ROLE` and `DATA_ANALYST_ROLE`.
 - **Validation Gate**:
-  - SQL scripts validated against Snowflake dialect syntax; IAM trust policy ready for external ID binding.
+  - Terraform validation passes; Snowflake external volume and catalog integration ready for cross-account IAM handshake.
 
 ---
 

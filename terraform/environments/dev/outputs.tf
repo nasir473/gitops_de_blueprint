@@ -226,5 +226,23 @@ output "cloudwatch_lambda_errors_alarm_arn" {
   value       = module.monitoring.lambda_errors_alarm_arn
 }
 
+# ==============================================================================
+# Snowflake Iceberg Integration Outputs
+# ==============================================================================
+output "snowflake_iceberg_role_arn" {
+  description = "The ARN of the IAM role to configure in Snowflake EXTERNAL VOLUME and CATALOG INTEGRATION"
+  value       = var.enable_snowflake ? module.snowflake_iam[0].role_arn : null
+}
+
+output "snowflake_iceberg_role_name" {
+  description = "The name of the IAM role configured for Snowflake"
+  value       = var.enable_snowflake ? module.snowflake_iam[0].role_name : null
+}
+
+output "snowflake_iceberg_policy_arn" {
+  description = "The ARN of the IAM policy granting Iceberg and Glue catalog read permissions"
+  value       = var.enable_snowflake ? module.snowflake_iam[0].policy_arn : null
+}
+
 
 

@@ -1,6 +1,6 @@
 # AWS Modern Data Platform (GitOps Monorepo)
 
-A production-ready, GitOps-driven blueprint for a Modern Data Platform on AWS, featuring Medallion architecture (Bronze/Silver/Quarantine), event-driven ingestion, PySpark batch transformations on AWS Glue, Athena ad-hoc querying, Apache Airflow orchestration, and Snowflake readiness.
+A production-ready, GitOps-driven blueprint for a Modern Data Platform on AWS, featuring Medallion architecture (Bronze/Silver/Quarantine), event-driven ingestion, PySpark batch transformations on AWS Glue, Athena ad-hoc querying, Apache Airflow orchestration, Databricks Unity Catalog, and Snowflake Zero-Copy Apache Iceberg Integration.
 
 ---
 
@@ -27,15 +27,17 @@ A production-ready, GitOps-driven blueprint for a Modern Data Platform on AWS, f
 │   │   ├── lambda/            # SQS-triggered validation Lambda [Phase 5]
 │   │   ├── glue/              # Glue Data Catalog & PySpark job definitions [Phase 6]
 │   │   ├── sqs/               # S3 ingestion notification queue & DLQ [Phase 5]
-│   │   └── athena/            # Athena workgroup and query results setup [Phase 8]
+│   │   ├── athena/            # Athena workgroup and query results setup [Phase 8]
+│   │   ├── databricks/        # Unity Catalog External Locations & Credentials [Phase 8]
+│   │   └── snowflake_iam/     # Snowflake Cross-Account IAM role & policies [Phase 9]
 │   └── environments/
 │       ├── dev/               # Development environment Terraform configuration
 │       ├── qa/                # QA / Staging environment Terraform configuration
 │       └── prod/              # Production environment Terraform configuration
 ├── snowflake/
-│   ├── rbac/                  # Role-based access control DDL [Phase 9]
-│   ├── stages/                # External S3 stages and storage integration [Phase 9]
-│   └── tables/                # Target analytical tables and views [Phase 9]
+│   ├── rbac/                  # Enterprise RBAC (DATA_ENGINEER, DATA_ANALYST) [Phase 9]
+│   ├── stages/                # External Volume & AWS Glue Catalog Integration [Phase 9]
+│   └── tables/                # Snowflake Iceberg tables synced with Glue Catalog [Phase 9]
 ├── sql/
 │   └── athena/                # Athena DDL, partition repair, and data quality queries [Phase 8]
 ├── tests/
@@ -102,7 +104,7 @@ The platform is designed to be built incrementally across 10 sequential phases. 
 | **Phase 6** | Glue PySpark ETL (Snappy Parquet, Delta Lake & Apache Iceberg) | **Complete** |
 | **Phase 7** | Airflow Orchestration & Event-Driven Batch Synchronization DAG | **Complete** |
 | **Phase 8** | Athena Ad-Hoc Analytics & Databricks Unity Catalog Governance | **Complete** |
-| **Phase 9** | Enterprise Snowflake Integration (External Stages) | Ready for Scaffolding |
+| **Phase 9** | Snowflake Zero-Copy Apache Iceberg Integration (Glue Catalog Synced) | **Complete** |
 | **Phase 10** | CI/CD Pipelines & Automation | Ready for Deployment |
 
 ---
@@ -120,7 +122,8 @@ The platform is designed to be built incrementally across 10 sequential phases. 
 | **Lakehouse Formats** | **Delta Lake** | `2.2.0` | ACID lakehouse table format for Databricks Unity Catalog serving |
 | | **Apache Iceberg** | `1.0.0` (Format v2) | Open table format with fan-out writer, registered in Glue Catalog |
 | | **Apache Parquet** | Snappy Compressed | Columnar storage format for Athena ad-hoc querying in Silver layer |
-| **Analytics & Serving**| **Databricks Unity Catalog** | External Location | Centralized enterprise governance & data access control |
+| **Analytics & Serving**| **Snowflake** | External Volume + Glue Catalog | Zero-Copy high-performance SQL analytics on Silver S3 Iceberg tables |
+| | **Databricks Unity Catalog** | External Location | Centralized enterprise governance & data access control |
 | | **Databricks SQL Warehouse** | Serverless (API 2.0) | High-performance BI queries & Gold `department_summary` table refresh |
 | | **Amazon Athena** | Engine Version 3 | Serverless interactive SQL ad-hoc analytics over Parquet & Iceberg |
 | | **AWS Glue Data Catalog** | Hive Metastore API | Centralized metadata store for tables, schemas, and partitions |
@@ -242,6 +245,45 @@ flowchart TD
 6. **Phase 6: Multi-Engine Querying & Gold Mart Refresh**
    - **Ad-Hoc SQL**: Amazon Athena executes verification queries against `gitops_dev_db.silver_employees` and spools results to the Athena results bucket.
    - **Enterprise BI & Governance**: Airflow executes Databricks SQL Warehouse API call. Databricks accesses Delta Lake through **Unity Catalog External Locations** and creates/refreshes the Gold summary table (`gold_department_summary`).
+   - **Zero-Copy Cloud Data Warehouse**: Snowflake queries `ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg` directly over Amazon S3 using **External Volumes** and **AWS Glue Catalog Integration** with zero data duplication.
+
+---
+
+## Phase 9: Snowflake Zero-Copy Apache Iceberg Integration
+
+The platform provides a production-grade, zero-copy connection between Snowflake and the Apache Iceberg Silver layer on Amazon S3, cataloged directly via AWS Glue.
+
+### Architectural Highlights
+
+- **Zero-Copy Lakehouse**: PySpark writes Iceberg v2 Parquet data once into `s3://gitops-silver-bkt-dev-790347819012/iceberg/` and updates the AWS Glue Catalog (`gitops_dev_db.employees_iceberg`). Snowflake queries the open format in place with sub-second performance.
+- **Dual External ID IAM Security Handshake**:
+  - Snowflake External Volume (`STORAGE_AWS_EXTERNAL_ID`): Grants secure S3 storage read/probe access.
+  - Snowflake Catalog Integration (`GLUE_AWS_EXTERNAL_ID`): Grants secure AWS Glue metadata synchronization.
+  - Both IDs are bound within a single least-privilege cross-account IAM role: `gitops-snowflake-iceberg-role-dev`.
+- **Infrastructure as Code**: Provisioned and managed entirely via [`terraform/modules/snowflake_iam/`](file:///Users/mohammednasirudeen/Documents/Project/Data%20Engineering/gitops_de_blueprint/terraform/modules/snowflake_iam/).
+- **Enterprise RBAC**: Segregates full pipeline engineering privileges (`DATA_ENGINEER_ROLE`) from read-only analytical consumers (`DATA_ANALYST_ROLE`).
+
+### Quick Snowflake SQL Verification
+
+```sql
+-- 1. Inspect Table Structure & Partitions
+DESC ICEBERG TABLE ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg;
+
+-- 2. Query Data in Place (Zero Ingestion Cost)
+SELECT * FROM ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg LIMIT 10;
+
+-- 3. Department Analytics
+SELECT 
+    department,
+    COUNT(*) AS total_employees,
+    ROUND(AVG(salary), 2) AS avg_salary
+FROM ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg
+GROUP BY department
+ORDER BY avg_salary DESC;
+
+-- 4. Operational Refresh (Triggered via Airflow DAG or manual on new batch)
+ALTER ICEBERG TABLE ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg REFRESH;
+```
 
 ---
 
@@ -292,7 +334,7 @@ git status
 git add .
 
 # 3. Commit
-git commit -m "feat: your descriptive commit message"
+git commit -m "until SQS, SNS iceberg - cloudwatch"
 
 # 4. Push to GitHub
 git push

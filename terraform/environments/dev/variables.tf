@@ -60,3 +60,29 @@ variable "databricks_token" {
   sensitive   = true
 }
 
+# ==============================================================================
+# Snowflake Iceberg Integration Configuration
+# ==============================================================================
+variable "enable_snowflake" {
+  description = "Toggle provisioning of Snowflake IAM integration resources"
+  type        = bool
+  default     = true
+}
+
+variable "snowflake_storage_aws_iam_user_arn" {
+  description = "Snowflake IAM user ARN obtained from DESC EXTERNAL VOLUME / DESC CATALOG INTEGRATION"
+  type        = string
+  default     = "arn:aws:iam::648423931155:user/ff7c2000-s"
+}
+
+variable "snowflake_storage_aws_external_id" {
+  description = "Snowflake External ID obtained from DESC EXTERNAL VOLUME"
+  type        = string
+  default     = "VW16761_SFCRole=6_6mxxGpIEcUlW/XT2uc6Da+S6+ho="
+}
+
+variable "snowflake_catalog_aws_external_id" {
+  description = "Snowflake External ID obtained from DESC CATALOG INTEGRATION"
+  type        = string
+  default     = "VW16761_SFCRole=6_mmjOTF+pBLVxyRnViGg1cTFnP5U="
+}
