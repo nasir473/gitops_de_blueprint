@@ -245,7 +245,7 @@ flowchart TD
 6. **Phase 6: Multi-Engine Querying & Gold Mart Refresh**
    - **Ad-Hoc SQL**: Amazon Athena executes verification queries against `gitops_dev_db.silver_employees` and spools results to the Athena results bucket.
    - **Enterprise BI & Governance**: Airflow executes Databricks SQL Warehouse API call. Databricks accesses Delta Lake through **Unity Catalog External Locations** and creates/refreshes the Gold summary table (`gold_department_summary`).
-   - **Zero-Copy Cloud Data Warehouse**: Snowflake queries `ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg` directly over Amazon S3 using **External Volumes** and **AWS Glue Catalog Integration** with zero data duplication.
+   - **Zero-Copy Cloud Data Warehouse**: Airflow executes `refresh_snowflake_iceberg_table` (`ALTER ICEBERG TABLE ANALYTICS_DEV.SILVER_ICEBERG.employees_iceberg REFRESH;`). Snowflake immediately binds new snapshots and serves fresh data with zero data duplication.
 
 ---
 
